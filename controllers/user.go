@@ -62,7 +62,7 @@ func (this *UserController) HandleReg () {
 	}
 
 	// 发送邮件
-	emailConfig := `{"username":"llw9830@foxmail.com","password":"ljdgtwygrvbjbdfh","host":"smtp.qq.com","port":587}`
+	emailConfig := `{"username":"llw9830@foxmail.com","password":"***********","host":"smtp.qq.com","port":587}`
 	emailConn := utils.NewEMail(emailConfig)
 	emailConn.From = "llw9830@foxmail.com"
 	//emailConn.To = []string{email}
