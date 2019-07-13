@@ -175,5 +175,102 @@ func (this *UserController) HandleLogin () {
 		this.Ctx.SetCookie("userName", "", -1)
 	}
 
-	this.Ctx.WriteString("登录成功！")
+	this.SetSession("userName", username)
+	//this.Ctx.WriteString("登录成功！")
+	this.Redirect("/", 302)
+}
+
+// 退出登录
+func (this *UserController) Logout () {
+	this.DelSession("userName")
+	// 跳转
+	this.Redirect("/login", 302)
+}
+
+// 展示用户中心页面
+func (this *UserController) ShowUserCenterInfo (){
+	userName := GetUser(&this.Controller)
+	this.Data["userName"] = userName
+	// 查询其他内容
+	// 获取地址表
+	o := orm.NewOrm()
+	// 高级查询 表关联
+	var addr models.Address
+	o.QueryTable("Address").RelatedSel("User").Filter("Receiver", userName).Filter("Isdefault", true).One(&addr)
+	this.Data["addr"] = addr
+	// 传递参数
+	if addr.Id == 0 {
+		this.Data["addr"] = ""
+	}else {
+		this.Data["addr"] = addr
+	}
+
+	this.Layout = "userCenterLayout.html"
+	this.TplName = "user_center_info.html"
+}
+
+// 展示用户中心订单页
+func (this *UserController)  ShowUserCenterOrder () {
+	GetUser( &this.Controller)
+
+	this.Layout = "userCenterLayout.html"
+	this.TplName = "user_center_order.html"
+}
+
+// 用户中心-收货地址页面展示
+func (this *UserController) ShowUserCenterSite () {
+	GetUser(&this.Controller)
+	this.Layout = "userCenterLayout.html"
+	this.TplName = "user_center_site.html"
+}
+
+// 添加收获地址
+func (this *UserController) HandleUserCenterSite () {
+	GetUser(&this.Controller)
+	//this.Layout = "userCenterLayout.html"
+	//this.TplName = "user_center_site.html"
+
+	// 获取数据
+	receiver := this.GetString("receiver")
+	addr := this.GetString("addr")
+	zipCode := this.GetString("zipCode")
+	phone := this.GetString("phone")
+	// 校验数据
+	if receiver==""||addr==""||zipCode==""||phone==""{
+		beego.Info("数据填写不完整！")
+		this.Redirect("/user/userCenterSite", 302)
+		return
+	}
+
+	o := orm.NewOrm()
+	var addrUser models.Address
+
+	addrUser.Isdefault = true
+	err := o.Read(&addrUser, "Isdefault")
+	// 如果原来有默认地址将老的默认地址改为非默认
+	if err == nil {
+		addrUser.Isdefault = false
+		o.Update(&addrUser)
+	}
+
+	// 更新地址时如果原来的覅在对象赋值了,还用原来的地址对象插入,也就是用原来的id插入会报错
+	// 关联的user表
+	var user models.User
+	userName := this.GetSession("userName")
+	user.Name = userName.(string)
+	o.Read(&user, "Name")
+
+	var addrUserNew models.Address
+	addrUserNew.Receiver = receiver
+	addrUserNew.Addr = addr
+	addrUserNew.Zipcode = zipCode
+	addrUserNew.Phone = phone
+	addrUserNew.Isdefault = true
+	addrUserNew.User = &user
+	o.Insert(&addrUserNew)
+
+
+	// 返回视图
+	this.Redirect("/user/userCenterSite", 302)
+
 }
