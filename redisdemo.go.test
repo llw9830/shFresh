@@ -1,0 +1,55 @@
+package main
+
+import (
+	"github.com/gomodule/redigo/redis"
+	"fmt"
+)
+
+func main1()  {
+	c, err := redis.Dial("tcp", "127.0.0.1:6379")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer c.Close()
+
+	c.Do("set", "c1", "hello world!")
+}
+
+func main()  {
+	c, err := redis.Dial("tcp", "127.0.0.1:6379")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer c.Close()
+	/*
+	c.Send("set", "a", "ccc") // 发送命令到缓冲区
+	c.Flush()	// 执行命令
+	rel, err := c.Receive() // 有返回值执行这步
+	*/
+	/*
+	// 使用Do和一步完成上面三步
+	rel, err := c.Do("get", "a") // 这样拿到的是字节码
+	*/
+
+	/*// 强转成string
+	//rel, err :=	redis.String(c.Do("get", "a"))
+	*/
+
+	/*// 获取多个
+	rel, err :=	redis.Strings(c.Do("mget", "name", "age", "sex"))*/
+
+	// 将返回值转成不同类型
+	res, err := redis.Values(c.Do("mget", "name", "age", "sex"))
+	var name string
+	var age int
+	var sex string
+	redis.Scan(res, &name, &age, &sex)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	//fmt.Println(rel) // 只会接收第一条send的返回数据
+	fmt.Println(name, age, sex)
+}

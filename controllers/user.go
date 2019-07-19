@@ -62,7 +62,7 @@ func (this *UserController) HandleReg () {
 	}
 
 	// 发送邮件
-	emailConfig := `{"username":"llw9830@foxmail.com","password":"***********","host":"smtp.qq.com","port":587}`
+	emailConfig := `{"username":"xxx@foxmail.com","password":"*************","host":"smtp.qq.com","port":587}`
 	emailConn := utils.NewEMail(emailConfig)
 	emailConn.From = "llw9830@foxmail.com"
 	//emailConn.To = []string{email}
@@ -93,7 +93,6 @@ func (this *UserController) ActiveUser() {
 		this.TplName = "register.html"
 		return
 	}
-
 	// 数据处理
 	// 更新操作
 	o := orm.NewOrm()
@@ -106,7 +105,11 @@ func (this *UserController) ActiveUser() {
 		return
 	}
 	user.Active = true
-	o.Update(&user)
+	_, err = o.Update(&user)
+
+	if err != nil{
+		log.Printf("更新user表失败：%v", err)
+	}
 
 	// 返回视图
 	this.Redirect("/login", 302)
@@ -196,7 +199,7 @@ func (this *UserController) ShowUserCenterInfo (){
 	o := orm.NewOrm()
 	// 高级查询 表关联
 	var addr models.Address
-	o.QueryTable("Address").RelatedSel("User").Filter("Receiver", userName).Filter("Isdefault", true).One(&addr)
+	o.QueryTable("Address").RelatedSel("User").Filter("User__Name", userName).Filter("Isdefault", true).One(&addr)
 	this.Data["addr"] = addr
 	// 传递参数
 	if addr.Id == 0 {
@@ -219,9 +222,16 @@ func (this *UserController)  ShowUserCenterOrder () {
 
 // 用户中心-收货地址页面展示
 func (this *UserController) ShowUserCenterSite () {
-	GetUser(&this.Controller)
+	userName := GetUser(&this.Controller)
 	this.Layout = "userCenterLayout.html"
 	this.TplName = "user_center_site.html"
+
+	// 获取用户设置的默认地址
+	o := orm.NewOrm()
+	var addr models.Address
+	o.QueryTable("Address").RelatedSel("User").Filter("User__Name", userName).Filter("Isdefault", true).One(&addr)
+
+	this.Data["addr"] = addr
 }
 
 // 添加收获地址

@@ -1,9 +1,9 @@
 package models
 
 import (
-	"github.com/astaxie/beego/orm"
-	_ "github.com/go-sql-driver/mysql"
-	"time"
+"github.com/astaxie/beego/orm"
+_ "github.com/go-sql-driver/mysql"
+"time"
 )
 
 type User struct{ //用户表
