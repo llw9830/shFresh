@@ -4,6 +4,8 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"beegodemo.com/shFresh/models"
+	"github.com/gomodule/redigo/redis"
+	"strconv"
 )
 
 type GoodsController struct {
@@ -111,6 +113,31 @@ func (this *GoodsController) ShowGoodsDetail () {
 
 	// 返回数据
 	this.Data["goodSKU"] = goodSKU
+
+	// 添加历史浏览记录
+	// 判断用户是否登录
+	uname := this.GetSession("userName")
+	if uname != nil{
+		// 查询用户信息
+		o := orm.NewOrm()
+		var user models.User
+		user.Name = uname.(string)
+		o.Read(&user, "Name")
+
+		// 添加历史记录, redis
+		conn, err := redis.Dial("tcp", "127.0.0.1:6379")
+		if err != nil {
+			beego.Info("redis链接错误！")
+		}
+		// 先删除数据
+		conn.Do("lrem", "history_" + strconv.Itoa(user.Id), 0, id)
+		// 插入数据
+		conn.Do("lpush", "history_" + strconv.Itoa(user.Id), id)
+
+
+	}
+
+
 
 	showLayout(&this.Controller)
 	this.TplName = "detail.html"

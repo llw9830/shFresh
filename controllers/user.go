@@ -9,6 +9,7 @@ import (
 	"github.com/astaxie/beego/utils"
 	"strconv"
 	"encoding/base64"
+	"github.com/gomodule/redigo/redis"
 )
 
 type UserController struct {
@@ -207,6 +208,29 @@ func (this *UserController) ShowUserCenterInfo (){
 	}else {
 		this.Data["addr"] = addr
 	}
+
+	// 获取历史浏览记录
+	conn, err := redis.Dial("tcp", "127.0.0.1:6379")
+	if err != nil {
+		beego.Info("redis链接错误！")
+	}
+	// 获取用户id作为redis查询条件
+	var user models.User
+	user.Name = userName
+	o.Read(&user, "Name")
+	// 从redis中获取前五个数据
+	rep, err := conn.Do("lrange", "history_" + strconv.Itoa(user.Id), 0, 4)
+	// 回复助手函数,获取所有商品id
+	goodsIDs, err := redis.Ints(rep, err)
+	// 查询出所有商品
+	var goodsSKUs []models.GoodsSKU
+	for _, value := range goodsIDs {
+		var goods models.GoodsSKU
+		goods.Id = value
+		o.Read(&goods)
+		goodsSKUs = append(goodsSKUs, goods)
+	}
+	this.Data["goodsSKUs"] = goodsSKUs
 
 	this.Layout = "userCenterLayout.html"
 	this.TplName = "user_center_info.html"
