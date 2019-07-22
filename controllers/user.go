@@ -211,6 +211,7 @@ func (this *UserController) ShowUserCenterInfo (){
 
 	// 获取历史浏览记录
 	conn, err := redis.Dial("tcp", "127.0.0.1:6379")
+	defer conn.Close()
 	if err != nil {
 		beego.Info("redis链接错误！")
 	}

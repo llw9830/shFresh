@@ -56,8 +56,11 @@
             <h1>全部商品分类</h1>
             <span></span>
             <ul class="subnav">
-                {{range .types}}
+                {{/*{{range .types}}
                     <li><a href="#" class="{{.Logo}}">{{.Name}}</a></li>
+                {{end}}*/}}
+                {{range .goodsTypes}}
+                    <li><a href="/goodsList?typeId={{.Id}}" class="{{.Logo}}">{{.Name}}</a></li>
                 {{end}}
             </ul>
         </div>

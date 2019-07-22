@@ -6,6 +6,7 @@ import (
 	"beegodemo.com/shFresh/models"
 	"github.com/gomodule/redigo/redis"
 	"strconv"
+	"math"
 )
 
 type GoodsController struct {
@@ -26,11 +27,11 @@ func GetUser(this *beego.Controller) string {
 }
 
 // 传递类型数据和username
-func showLayout (this*beego.Controller) {
-	var types []*models.GoodsType
+func ShowLayout (this*beego.Controller) {
+	var goodsTypes []*models.GoodsType
 	o := orm.NewOrm()
-	o.QueryTable("GoodsType").All(&types)
-	this.Data["types"] = types
+	o.QueryTable("GoodsType").All(&goodsTypes)
+	this.Data["goodsTypes"] = goodsTypes
 	GetUser(this)
 	this.Layout = "goodsLayout.html"
 }
@@ -126,6 +127,7 @@ func (this *GoodsController) ShowGoodsDetail () {
 
 		// 添加历史记录, redis
 		conn, err := redis.Dial("tcp", "127.0.0.1:6379")
+		defer conn.Close()
 		if err != nil {
 			beego.Info("redis链接错误！")
 		}
@@ -139,6 +141,98 @@ func (this *GoodsController) ShowGoodsDetail () {
 
 
 
-	showLayout(&this.Controller)
+	ShowLayout(&this.Controller)
 	this.TplName = "detail.html"
+}
+
+// 分页
+func PageTool(pageCount, pageIndex int) []int {
+	// 这里默认显示5页下标
+	pages := make([]int, pageCount)
+	// 总页数小于5时
+	if pageCount <= 5 {
+		for i, _ := range pages {
+			pages[i] = i+1
+		}
+		//  总页数大于5且当前下标效于3
+	} else if pageIndex <= 3 {
+		pages = []int{1, 2, 3, 4, 5}
+		// 当前页在最后三页中时显示最后5页
+	} else if pageIndex > pageCount - 3 {
+		pages = []int{pageCount-4, pageCount-3, pageCount-2, pageCount-1, pageCount}
+	} else {
+		// 页数在中间时
+		pages = []int {pageIndex-2, pageIndex-1, pageIndex, pageIndex+1, pageIndex+2}
+	}
+	return pages
+}
+
+// 展示商品列表页
+func (this *GoodsController)  ShowList () {
+	// 获取数据
+	id, err := this.GetInt("typeId")
+	// 校验数据
+	if err != nil{
+		beego.Info("请求路径错误！")
+		this.Redirect("/", 302)
+		return
+	}
+
+	// 处理数据
+	ShowLayout(&this.Controller)
+	// 获取新品
+	o := orm.NewOrm()
+	var goodsNew []models.GoodsSKU
+	// 拿到该类型下的新品数据， 按时间排序前两条
+	o.QueryTable("GoodsSKU").RelatedSel("GoodsType").
+		Filter("GoodsType__Id", id).OrderBy("Time").Limit(2, 0).All(&goodsNew)
+	this.Data["goodsNew"] = goodsNew
+
+	// 获取商品
+	var goods []models.GoodsSKU
+	/*o.QueryTable("GoodsSKU").RelatedSel("GoodsType").
+		Filter("GoodsType__Id", id).All(&goods)
+	this.Data["goods"] = goods*/
+
+	// 分页
+	// 获取pageCount
+	// 总页数
+	count, _ := o.QueryTable("GoodsSKU").RelatedSel("GoodsType").
+		Filter("GoodsType__Id", id).Count()
+	// 每页数量
+	pageSize := 1
+	// 总页数
+	pageCount := math.Ceil(float64(count)/float64(pageSize))
+	pageIndex, err := this.GetInt("pageIndex")
+	if err != nil{
+		beego.Info("获取pageIndex错误：%v.", err)
+		pageIndex = 1
+	}
+	// 分页
+	//pageCount = 3
+	pages := PageTool(int(pageCount), pageIndex)
+	this.Data["pages"] = pages // 显示也页面数
+	this.Data["typeId"] = id // 类型ID
+	this.Data["pageIndex"] = pageIndex
+	// 上一页
+	preIndex := pageIndex - 1
+	if preIndex <= 1 {
+		preIndex = 1
+	}
+	this.Data["preIndex"] = preIndex
+	// 下一页
+	nextIndex := pageIndex + 1
+	if nextIndex >= int(pageCount) {
+		nextIndex = int(pageCount)
+	}
+	this.Data["nextIndex"] = nextIndex
+
+	// 返回当前页数据
+	start := pageSize * (pageIndex - 1)
+	o.QueryTable("GoodsSKU").RelatedSel("GoodsType").
+		Filter("GoodsType__Id", id).Limit(pageSize, start).All(&goods)
+	this.Data["goods"] = goods
+
+	// 返回数据
+	this.TplName = "list.html"
 }
