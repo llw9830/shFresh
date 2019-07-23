@@ -69,6 +69,7 @@
 
 	<script type="text/javascript" src="/static/js/jquery-1.12.4.min.js"></script>
 	<script type="text/javascript">
+		// 更新显示总价格
         UpdateGoodsPrice()
 		function UpdateGoodsPrice() {
 			price = $('.show_pirze').children('em').text()
@@ -107,6 +108,19 @@
             UpdateGoodsPrice()
         })
 
+		// 手动输入商品数量
+		$('.num_show').blur(function () {  // blur-失去焦点
+			count = $(this).val()
+			// 校验数据
+			if (isNaN(count) || count.trim().length==0 || parseInt(count) < 1 ) { // 当不是数字||去掉空格后长度为0||值效于1
+				count = 1
+			}
+			// 更新页面显示
+			$(this).val(count)
+			// 更新总价
+            UpdateGoodsPrice()
+
+        })
 
 
         var $add_x = $('#add_cart').offset().top;
