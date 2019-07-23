@@ -200,12 +200,12 @@ func (this *GoodsController)  ShowList () {
 	count, _ := o.QueryTable("GoodsSKU").RelatedSel("GoodsType").
 		Filter("GoodsType__Id", id).Count()
 	// 每页数量
-	pageSize := 1
+	pageSize := 3
 	// 总页数
 	pageCount := math.Ceil(float64(count)/float64(pageSize))
 	pageIndex, err := this.GetInt("pageIndex")
 	if err != nil{
-		beego.Info("获取pageIndex错误：%v.", err)
+		//beego.Info("获取pageIndex错误：%v.", err)
 		pageIndex = 1
 	}
 	// 分页
@@ -229,10 +229,50 @@ func (this *GoodsController)  ShowList () {
 
 	// 返回当前页数据
 	start := pageSize * (pageIndex - 1)
-	o.QueryTable("GoodsSKU").RelatedSel("GoodsType").
-		Filter("GoodsType__Id", id).Limit(pageSize, start).All(&goods)
-	this.Data["goods"] = goods
+
+
+	// 按一定顺序获取商品
+	sort := this.GetString("sort")
+	if sort == "" {
+		o.QueryTable("GoodsSKU").RelatedSel("GoodsType").
+			Filter("GoodsType__Id", id).Limit(pageSize, start).All(&goods)
+		this.Data["goods"] = goods
+		this.Data["sort"] = ""
+	}else if sort == "price" {
+		o.QueryTable("GoodsSKU").RelatedSel("GoodsType").
+			Filter("GoodsType__Id", id).OrderBy("Price").Limit(pageSize, start).All(&goods)
+		this.Data["goods"] = goods
+		this.Data["sort"] = "price"
+	}else if sort == "sale" {
+		o.QueryTable("GoodsSKU").RelatedSel("GoodsType").
+			Filter("GoodsType__Id", id).OrderBy("Sales").Limit(pageSize, start).All(&goods)
+		this.Data["goods"] = goods
+		this.Data["sort"] = "sale"
+	}
 
 	// 返回数据
 	this.TplName = "list.html"
+}
+
+
+// 搜索
+func (this *GoodsController) HandleSearch () {
+	// 获取数据
+	goodsName := this.GetString("goodsName")
+
+	o := orm.NewOrm()
+	var goods []models.GoodsSKU
+	// 校验数据
+	if goodsName == "" {
+		o.QueryTable("GoodsSKU").All(&goods)
+		this.Data["goods"] = goods
+		ShowLayout(&this.Controller)
+		this.TplName = "search.html"
+		return
+	}
+	// 处理数据
+	o.QueryTable("GoodsSKU").Filter("Name__icontains", goodsName).All(&goods)
+	this.Data["goods"] = goods
+	ShowLayout(&this.Controller)
+	this.TplName = "search.html"
 }

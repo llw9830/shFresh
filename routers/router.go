@@ -30,6 +30,8 @@ func init() {
 	beego.Router("/goodsDetail", &controllers.GoodsController{}, "get:ShowGoodsDetail")
 	// 获取商品列表页
 	beego.Router("/goodsList", &controllers.GoodsController{}, "get:ShowList")
+	// 商品搜索
+	beego.Router("/goodsSearch", &controllers.GoodsController{}, "post:HandleSearch")
 
 }
 

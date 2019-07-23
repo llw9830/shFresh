@@ -67,9 +67,49 @@
 
 	<div class="add_jump"></div>
 
-	<script type="text/javascript" src="js/jquery-1.12.2.js"></script>
+	<script type="text/javascript" src="/static/js/jquery-1.12.4.min.js"></script>
 	<script type="text/javascript">
-		var $add_x = $('#add_cart').offset().top;
+        UpdateGoodsPrice()
+		function UpdateGoodsPrice() {
+			price = $('.show_pirze').children('em').text()
+			count = $('.num_show').val()
+			// alert(price)
+			// alert(count)
+			price = parseFloat(price)
+			count = parseInt(count)
+			total = count * price
+            $('.total').children('em').text(total.toFixed(2)+'元')
+
+        }
+
+        // 点击加号的触发事件
+        $('.add').click(function () {
+            count = $('.num_show').val()
+
+			count = parseInt(count) + 1
+			// 展示数量
+            $('.num_show').val(count)
+			// 更新总价
+            UpdateGoodsPrice()
+        })
+
+        // 点击减号的触发事件
+        $('.minus').click(function () {
+            count = $('.num_show').val()
+
+            count = parseInt(count) - 1
+			if (count < 1) {
+                count = 1
+			}
+            // 展示数量
+            $('.num_show').val(count)
+            // 更新总价
+            UpdateGoodsPrice()
+        })
+
+
+
+        var $add_x = $('#add_cart').offset().top;
 		var $add_y = $('#add_cart').offset().left;
 
 		var $to_x = $('#show_count').offset().top;
