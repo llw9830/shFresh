@@ -142,6 +142,7 @@ func (this *GoodsController) ShowGoodsDetail () {
 
 
 	ShowLayout(&this.Controller)
+	this.Data["cartCount"] = GetCartCount(&this.Controller)
 	this.TplName = "detail.html"
 }
 

@@ -27,7 +27,7 @@
 			<div class="total">总价：<em>16.80元</em></div>
 			<div class="operate_btn">
 				<a href="javascript:;" class="buy_btn">立即购买</a>
-				<a href="javascript:;" class="add_cart" id="add_cart">加入购物车</a>				
+				<a href="javascript:;" class="add_cart" skuid="{{.goodSKU.Id}}" id="add_cart">加入购物车</a>
 			</div>
 		</div>
 	</div>
@@ -116,11 +116,12 @@
 				count = 1
 			}
 			// 更新页面显示
-			$(this).val(count)
+			$(this).val(parseInt(count))
 			// 更新总价
             UpdateGoodsPrice()
 
         })
+
 
 
         var $add_x = $('#add_cart').offset().top;
@@ -129,17 +130,31 @@
 		var $to_x = $('#show_count').offset().top;
 		var $to_y = $('#show_count').offset().left;
 
-		$(".add_jump").css({'left':$add_y+80,'top':$add_x+10,'display':'block'})
-		$('#add_cart').click(function(){
-			$(".add_jump").stop().animate({
-				'left': $to_y+7,
-				'top': $to_x+7},
-				"fast", function() {
-					$(".add_jump").fadeOut('fast',function(){
-						$('#show_count').html(2);
-					});
+        $(".add_jump").css({'left':$add_y+80,'top':$add_x+10,'display':'block'})
+        $('#add_cart').click(function(){
+			// 获取商品Id
+            skuid = $('#add_cart').attr('skuid')
+			count = $('.num_show').val()
 
-			});
+			param = {'skuid': skuid, 'count': count}
+			// 路径； 参数； 返回处理函数
+            $.post('/user/addCart', param, function (data) {
+                $(".add_jump").css({'left':$add_y+80,'top':$add_x+10,'display':'block'})
+                if (data.code == 5) {
+                    $(".add_jump").stop().animate({
+                            'left': $to_y+7,
+                            'top': $to_x+7},
+                            "fast", function() {
+                             $(".add_jump").fadeOut('fast',function(){
+                              	$('#show_count').html(data.cartCount);
+                             });
+                            });
+				}else {
+				    alert(data)
+				}
+            })
+
+
 		})
 	</script>
 
