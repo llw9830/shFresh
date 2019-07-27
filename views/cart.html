@@ -62,18 +62,18 @@
 		<ul class="cart_list_td clearfix">
 			<li class="col01"><input type="checkbox" name="" checked></li>
 			<li class="col02"><img src="http://192.168.229.130:8888/{{.goodsSKU.Image}}"></li>
-			<li class="col03">奇异果<br><em>{{.goodsSKU.Price}}元/{{.goodsSKU.Unite}}</em></li>
+			<li class="col03">{{.goodsSKU.Name}}<br><em>{{.goodsSKU.Price}}元/{{.goodsSKU.Unite}}</em></li>
 			<li class="col04">{{.goodsSKU.Unite}}</li>
 			<li class="col05">{{.goodsSKU.Price}}</li>
 			<li class="col06">
 				<div class="num_add">
 					<a href="javascript:;" class="add fl">+</a>
-					<input type="text" class="num_show fl" value="{{.count}}">
+					<input type="text" class="num_show fl" skuid={{.goodsSKU.Id}} value="{{.count}}">
 					<a href="javascript:;" class="minus fl">-</a>
 				</div>
 			</li>
 			<li class="col07">{{.addPrice}}元</li>
-			<li class="col08"><a href="javascript:;">删除</a></li>
+			<li class="col08"><a href="javascript:;" class="deleteCart" skuid="{{.goodsSKU.Id}}">删除</a></li>
 		</ul>
 	{{end}}
 
@@ -100,3 +100,221 @@
 	
 </body>
 </html>
+
+
+
+
+
+		<script type="text/javascript">
+			function UpdateGoodsPrice() {
+			    totalCount = 0
+				totalPrice = 0
+			    // 找到所有class为cart_list_td下，状态为checked选中的，所有父节点ul
+                $('.cart_list_td').find(':checked').parents('ul').each(function () {
+					count = $(this).find('.num_show').val()
+					price = $(this).children('.col07').text()
+
+					count = parseInt(count)
+					price = parseFloat(price)
+
+					// 叠加
+                    totalCount += count
+                    totalPrice += price
+                })
+
+				$('.settlements').children('.col03').children('em').text(totalPrice)
+				$('.settlements').children('.col03').children('b').text(totalCount)
+
+				$('.total_count').children('em').text(totalCount)
+            }
+
+
+			// 设置全选和全不选状态
+			$('.settlements').find(':checkbox').change(function () {
+			    // 获取全选框状态
+				is_checked = $(this).prop('checked')
+				// 根据全选框状态更新其他框的状态
+				$('.cart_list_td').find(':checkbox').each(function () {
+					$(this).prop('checked', is_checked)
+                })
+
+				UpdateGoodsPrice()
+            })
+
+
+			// 根据商品改变来改变全选状态
+			$('.cart_list_td').find(':checkbox').change(function () {
+                // 勾选框个数
+                checkBoxLength = $('.cart_list_td').find(':checkbox').length
+                // 已经勾选的个数
+                checkedLength = $('.cart_list_td').find(':checked').length
+
+                if (checkBoxLength > checkedLength) {
+                    $('.settlements').find(':checkbox').prop('checked', '')
+                } else {
+                    $('.settlements').find(':checkbox').prop('checked', 'checked')
+                }
+
+                UpdateGoodsPrice( )
+            })
+
+
+			// 在购物车页面添加商品数量
+			$('.add').click(function () {
+			    // 获取数量个商品id到后台更新数据库
+				count = $(this).next().val()
+				count = parseInt(count) + 1
+				skuid = $(this).next().attr('skuid')
+
+				// 因为在下面fun中无法使用this，在外面设置一个变量
+				// errUpdate = false
+
+				// 设置sjax同步
+				$.ajaxSettings.async = false
+				param = {"count": count, "skuid": skuid}
+				$.post('/user/UpdateCart', param, function (data) {
+					if (data.code == 5) {
+                        errUpdate = false
+                    } else {
+                        errUpdate = true
+                    }
+                })
+                $.ajaxSettings.async = true
+
+                if (!errUpdate) {
+				    $(this).next().val(count)
+					// 计算小计
+					// 单价
+					price = $(this).parents('ul').children('.col05').text()
+					price = parseFloat(price)
+					// alert(price)
+					// 小计
+                    amount = count * price
+                    $(this).parents('ul').children('.col07').text(amount.toFixed(2) + '元')
+                }
+
+                isChecked = $(this).parents('ul').find(':checkbox').prop('checked')
+				if (isChecked) {
+				    UpdateGoodsPrice()
+				}
+            })
+
+
+			// 在购物车页面减少商品数量
+			$('.minus').click(function () {
+				count = $(this).prev().val()
+				count = parseInt(count) - 1
+
+				// 当值小于1时不发送请求
+				if (count < 1) {
+				    count = 1
+					$(this).prev().val(count)
+					return
+				}
+                skuid = $(this).prev().attr('skuid')
+                param = {"count": count, "skuid": skuid}
+
+				$.ajaxSettings.async = false
+                $.post('/user/UpdateCart', param, function (data) {
+                    if (data.code == 5) {
+                        errUpdate = false
+                    } else {
+                        errUpdate = true
+						alert(data.errmsg)
+                    }
+                })
+                $.ajaxSettings.async = true
+
+				// 当后台操作正常时更新前台页面显示
+				if (!errUpdate) {
+                    $(this).prev().val(count)
+                    // 计算小计
+                    // 单价
+                    price = $(this).parents('ul').children('.col05').text()
+                    price = parseFloat(price)
+                    // alert(price)
+                    // 小计
+                    amount = count * price
+                    $(this).parents('ul').children('.col07').text(amount.toFixed(2) + '元')
+				}
+
+				// 根据是否勾选显示总价格
+                isChecked = $(this).parents('ul').find(':checkbox').prop('checked')
+                if (isChecked) {
+                    UpdateGoodsPrice()
+                }
+            })
+
+
+
+			preCount = $(".num_show").val()
+
+			// 手动输入数量
+			$('.num_show').blur(function () {
+				count = $(this).val()
+				// count = parseInt(count)
+
+				// 判断数字为负数或非num
+				if (isNaN(count) || count.trim().length==0 || parseInt(count) < 1 ) {
+					count = preCount // 等于之前的值
+					$(this).val(count)
+					return
+				}
+
+				skuid = $(this).attr('skuid')
+				param = {"skuid": skuid, "count": count}
+
+				$.ajaxSettings.async = false
+				$.post("/user/UpdateCart", param, function (data) {
+					if (data.code = 5) {
+                        errUpdate = false
+					} else {
+                        errUpdate = true
+					}
+                })
+                $.ajaxSettings.async = true
+
+				if (!errUpdate) {
+				    $(this).val(count)
+                    // 计算小计
+                    // 单价
+                    price = $(this).parents('ul').children('.col05').text()
+                    price = parseFloat(price)
+                    // alert(price)
+                    // 小计
+                    amount = count * price
+                    $(this).parents('ul').children('.col07').text(amount.toFixed(2) + '元')
+				}
+                // 根据是否勾选显示总价格
+                isChecked = $(this).parents('ul').find(':checkbox').prop('checked')
+                if (isChecked) {
+                    UpdateGoodsPrice()
+                }
+            })
+
+			// 删除商品
+			$('.deleteCart').click(function () {
+				skuid = $(this).attr('skuid')
+				param = {'skuid': skuid}
+
+                $.ajaxSettings.async = false
+                $.post('/user/deleteCart', param, function (data) {
+					if (data.code == 5) {
+					    errUpdate = false
+					} else {
+                        errUpdate = true
+						alert(data.errmsg)
+                    }
+                })
+                $.ajaxSettings.async = true
+				// 当后台返回正常，更新前台数据
+				if (!errUpdate) {
+					$(this).parents("ul").remove()
+				}
+
+				isChecked = $(this).parents('ul').find(':checkbox').prop('checked')
+				if (isChecked) {
+                    UpdateGoodsPrice()
+				}
+            })
+		</script>

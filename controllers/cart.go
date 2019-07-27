@@ -142,3 +142,95 @@ func (this *CartController) ShowCart () {
 
 	this.TplName = "cart.html"
 }
+
+
+// 更新购物车数量
+func (this *CartController) HandleUpdateCart () {
+	skuid, err1 := this.GetInt("skuid")
+	count, err2 := this.GetInt("count")
+	resp := make(map[string]interface{})
+	defer this.ServeJSON() // 发送数据
+
+	// 校验数据
+	if err1 != nil || err2 != nil {
+		resp["code"] = 1
+		resp["errmsg"] = "请求数据不正确"
+		this.Data["json"] = resp
+		return
+	}
+
+
+	userName := this.GetSession("userName")
+	if userName == nil {
+		resp["code"] = 3
+		resp["errmsg"] = "用户未登录！"
+		this.Data["json"] = resp
+		return
+	}
+	o := orm.NewOrm()
+	var user models.User
+	user.Name = userName.(string)
+	o.Read(&user, "Name")
+
+
+
+	// 处理数据
+	conn, err := redis.Dial("tcp", "127.0.0.1:6379")
+	if err != nil {
+		resp["code"] = 2
+		resp["errmsg"] = "redis连接不正确"
+		this.Data["json"] = resp
+		return
+	}
+	defer  conn.Close()
+
+	conn.Do("hset", "cart_" + strconv.Itoa(user.Id), skuid, count)
+
+	resp["code"] = 5
+	resp["errmsg"] = "OK"
+	this.Data["json"] = resp
+
+
+}
+
+
+// 删除购物车
+func (this *CartController) DeleteCart () {
+		// 获取数据
+	skuid, err := this.GetInt("skuid")
+
+	resp := make(map[string] interface{})
+	defer this.ServeJSON()
+	// 校验数据
+	if err != nil{
+		resp["errcode"] = 1
+		resp["errmsg"] = "确切数据不正确！"
+
+		this.Data["json"] = resp
+		return
+	}
+
+	// 处理数据
+	// 处理数据
+	conn, err := redis.Dial("tcp", "127.0.0.1:6379")
+	defer  conn.Close()
+	if err != nil {
+		resp["code"] = 2
+		resp["errmsg"] = "redis连接不正确"
+		this.Data["json"] = resp
+		return
+	}
+
+	userName := this.GetSession("userName")
+	o := orm.NewOrm()
+	user := models.User{}
+	user.Name = userName.(string)
+	o.Read(&user, "Name")
+	conn.Do("hdel", "cart_" + strconv.Itoa(user.Id), skuid)
+
+	// 返回数据
+	resp["code"] = 5
+	resp["errmsg"] = "OK"
+	this.Data["json"] = resp
+
+}

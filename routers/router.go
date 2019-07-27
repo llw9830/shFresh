@@ -36,6 +36,10 @@ func init() {
 	beego.Router("/user/addCart", &controllers.CartController{}, "post:HandleAddCart")
 	// 展示购物车页面
 	beego.Router("/user/cart", &controllers.CartController{}, "get:ShowCart")
+	// 更新购物车数量
+	beego.Router("/user/UpdateCart", &controllers.CartController{}, "post:HandleUpdateCart")
+	// 删除购物车数据
+	beego.Router("/user/deleteCart", &controllers.CartController{}, "post:DeleteCart")
 
 }
 
