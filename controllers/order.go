@@ -18,7 +18,6 @@ type OrderController struct {
 func (this *OrderController) ShowOrder () {
 	// 获取数据
 	skuids := this.GetStrings("skuid")
-	beego.Info(skuids)
 	// 校验数据
 	if len(skuids) == 0 {
 		beego.Info("确切数据错误！")
@@ -70,6 +69,7 @@ func (this *OrderController) ShowOrder () {
 	transferPrice := 10
 	this.Data["transferPrice"] = transferPrice
 	realPrice := totalPrice + transferPrice
+
 	this.Data["realPrice"] = realPrice
 
 
@@ -93,7 +93,7 @@ func (this *OrderController) AddOrder () {
 	payId, _ := this.GetInt("payId")
 	skuid := this.GetString("skuids") // 这里拿到的是一个类似[1, 2, 3]的字符串
 	skuid = skuid[1: len(skuid)-1] // 去掉首位的[]
-	skuids := strings.Split(skuid, "") // 用空格分割
+	skuids := strings.Split(skuid, " ") // 用空格分割
 
 
 	totalCount, _ := this.GetInt("totalCount")
@@ -153,30 +153,64 @@ func (this *OrderController) AddOrder () {
 
 		var goods models.GoodsSKU
 		goods.Id = id
-		o.Read(&goods)
 
-		var orderGoods models.OrderGoods
-		orderGoods.GoodsSKU = &goods
-		orderGoods.OrderInfo = &order
+		// 循环三次
+		i := 3
+		for i > 0 {
+			o.Read(&goods)
 
-		// 获取商品数量
-		count, _ :=	redis.Int(conn.Do("hget", "cart_" + strconv.Itoa(user.Id), id))
+			var orderGoods models.OrderGoods
+			orderGoods.GoodsSKU = &goods
+			orderGoods.OrderInfo = &order
 
-		//
-		if count > goods.Stock {
-			resp["code"] = 2
-			resp["errmsg"] = "商品库存不足！"
-			this.Data["json"] = resp
-			// 事务回滚
-			o.Rollback()
-			return
+			// 获取商品数量
+			count, _ :=	redis.Int(conn.Do("hget", "cart_" + strconv.Itoa(user.Id), id))
+
+			//
+			if count > goods.Stock {
+				resp["code"] = 2
+				resp["errmsg"] = "商品库存不足！"
+				this.Data["json"] = resp
+				// 事务回滚
+				o.Rollback()
+				return
+			}
+
+			// 原来的库存,提交更新数据库时与这个相比
+			preCount := goods.Stock
+
+			time.Sleep(5 * time.Second)
+
+			orderGoods.Count = count
+
+			orderGoods.Price = count * goods.Price
+
+			o.Insert(&orderGoods)
+
+			//减少库存  增加销量
+			goods.Stock -= count
+			goods.Sales += count
+
+			// 通过原来的商品库存查询更新，如果库存与现在不一致，回退数据库操作。
+			updateCount, _ := o.QueryTable("GoodsSKU").Filter("Id", goods.Id).Filter("Stock", preCount).
+				Update(orm.Params{"Stock": goods.Stock, "Sales": goods.Sales})
+			if updateCount == 0 {
+				if i > 0 {
+					i -= 1
+					continue
+				}
+				resp["code"] = 3
+				resp["errmsg"] = "商品库存改变，提交订单失败！"
+				this.Data["json"] = resp
+				// 事务回滚
+				o.Rollback()
+				return
+			} else {
+				// 更新redis
+				conn.Do("hdel", "cart_" + strconv.Itoa(user.Id), goods.Id)
+				break
+			}
 		}
-
-		orderGoods.Count = count
-
-		orderGoods.Price = count * goods.Price
-
-		o.Insert(&orderGoods)
 	}
 
 	// 事务提交

@@ -137,9 +137,9 @@
 			totalCount = $('.total_goods_count').children('em').text()
             totalPrice = $('.total_goods_count').children('b').text()
             transferPrice = $('.transit').children('b').text()
-            realPrice = $('total_pay').children('b').text()
+            realPrice = $('.total_pay').children('b').text()
 
-			param = {"addrId": addrId, "payId": payId, "skuids": skuids, "totalCount": totalCount, "totalPrice": totalPrice, "transferPrice": transferPrice, "realPrice": realPrice}
+			param = {"addrId": addrId, "payId": payId, "skuids": skuids, "totalCount": totalCount, "totalPrice": parseInt(totalPrice), "transferPrice": parseInt(transferPrice), "realPrice": parseInt(realPrice)}
 
 			$.post("/user/addOrder", param, function (data) {
 				if (data.code == 5) {

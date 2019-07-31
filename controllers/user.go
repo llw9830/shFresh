@@ -239,7 +239,33 @@ func (this *UserController) ShowUserCenterInfo (){
 
 // 展示用户中心订单页
 func (this *UserController)  ShowUserCenterOrder () {
-	GetUser( &this.Controller)
+	userName := GetUser( &this.Controller)
+
+	o := orm.NewOrm()
+	var user models.User
+	user.Name = userName
+	o.Read(&user, "Name")
+
+	// 获取订单表数据-order_info
+	var orderInfos []models.OrderInfo
+	o.QueryTable("OrderInfo").RelatedSel("User").Filter("User__id", user.Id).All(&orderInfos)
+
+	// 获取订商品表
+	goodsBuffer := make([]map[string]interface{}, len(orderInfos))
+	for index, orderInfo := range orderInfos {
+		var orderGoods []models.OrderGoods
+		o.QueryTable("OrderGoods").RelatedSel("OrderInfo", "GoodsSKU").Filter("OrderInfo__Id", orderInfo.Id).All(&orderGoods)
+
+		temp := make(map[string]interface{})
+		temp["orderInfo"] = orderInfo
+		temp["time"] = orderInfo.Time.Format("2006年01月02日 15:04")
+		temp["orderGoods"] = orderGoods
+
+		//beego.Info(orderGoods)
+
+		goodsBuffer[index] = temp
+	}
+	this.Data["goodsBuffer"] = goodsBuffer
 
 	this.Layout = "userCenterLayout.html"
 	this.TplName = "user_center_order.html"
