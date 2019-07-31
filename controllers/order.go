@@ -8,6 +8,8 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"time"
 	"strings"
+	"github.com/smartwalle/alipay"
+	"fmt"
 )
 
 type OrderController struct {
@@ -179,7 +181,7 @@ func (this *OrderController) AddOrder () {
 			// 原来的库存,提交更新数据库时与这个相比
 			preCount := goods.Stock
 
-			time.Sleep(5 * time.Second)
+			//time.Sleep(5 * time.Second)
 
 			orderGoods.Count = count
 
@@ -220,4 +222,62 @@ func (this *OrderController) AddOrder () {
 	resp["code"] = 5
 	resp["errmsg"] = "OK"
 	this.Data["json"] = resp
+}
+
+
+// 处理支付
+func (this *OrderController) HandlePay () {
+	var aliPublicKey = "" // 可选，支付宝提供给我们用于签名验证的公钥，通过支付宝管理后台获取
+	var privateKey =""// 必须，上一步中使用 RSA签名验签工具 生成的私钥
+	var client, err1 = alipay.New("", aliPublicKey, privateKey, false)
+
+	// 将 key 的验证调整到初始化阶段
+	if err1 != nil {
+		fmt.Println(err1)
+		return
+	}
+
+	orderId := this.GetString("orderId")
+	totalPrice := this.GetString("totalPrice")
+
+	var p = alipay.TradePagePay{}
+	p.NotifyURL = "http://xxx"
+	p.ReturnURL = "http://192.168.31.213:8080/user/payok"
+	p.Subject = "天天生鲜购物平台"
+	p.OutTradeNo = orderId
+	p.TotalAmount = totalPrice
+	p.ProductCode = "FAST_INSTANT_TRADE_PAY"
+
+	var url, err = client.TradePagePay(p)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var payURL = url.String()
+	this.Redirect(payURL, 302)
+	// 这个 payURL 即是用于支付的 URL，可将输出的内容复制，到浏览器中访问该 URL 即可打开支付页面。
+}
+
+
+// 支付成功
+func (this *OrderController) PayOk () {
+	orderId := this.GetString("out_trade_no")
+	// 校验
+	if orderId == ""{
+		beego.Info("支付返回错误！")
+		this.Redirect("/user/userCenterOrder", 302)
+		return
+	}
+
+	// 更新数据库
+	o := orm.NewOrm()
+	// 更新支付状态
+	count, _ := o.QueryTable("OrderInfo").Filter("OrderId", orderId).Update(orm.Params{"Orderstatus": 2})
+	if count == 0 {
+		beego.Info("更新数据错误！")
+		this.Redirect("/user/userCenterOrder", 302)
+		return
+	}
+
+	this.Redirect("/user/userCenterOrder", 302)
 }

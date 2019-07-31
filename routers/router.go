@@ -44,6 +44,10 @@ func init() {
 	beego.Router("/user/showOrder", &controllers.OrderController{}, "post:ShowOrder")
 	// 添加订单
 	beego.Router("/user/addOrder", &controllers.OrderController{}, "post:AddOrder")
+	// 处理支付
+	beego.Router("/user/pay", &controllers.OrderController{}, "get:HandlePay")
+	// 支付成功
+	beego.Router("/user/payok", &controllers.OrderController{}, "get:PayOk")
 
 }
 

@@ -31,7 +31,7 @@
 								</td>
 								<td width="15%">{{.orderInfo.TotalPrice}}元</td>
 								<td width="15%">{{if compare .orderInfo.Orderstatus 1}}待付款{{else}}已付款{{end}}</td>
-								<td width="15%">{{if compare .orderInfo.Orderstatus 1}}<a href="#" class="oper_btn">去付款</a>{{else}}<a href="#" class="oper_btn">已付款</a>{{end}}</td>
+								<td width="15%">{{if compare .orderInfo.Orderstatus 1}}<a href="/user/pay?orderId={{.orderInfo.OrderId}}&totalPrice={{.orderInfo.TotalPrice}}" class="oper_btn">去付款</a>{{else}}<a href="#" class="oper_btn">已付款</a>{{end}}</td>
 							</tr>
 						</tbody>
 					</table>
@@ -76,3 +76,5 @@
 				</div>
 		</div>
 	</div>
+
+
